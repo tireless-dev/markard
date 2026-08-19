@@ -10,7 +10,6 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.draw.shadow
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -222,7 +221,7 @@ private fun PreviewPanel(markdown: String, theme: MarkardTheme, modifier: Modifi
                             this@drawWithContent.drawContent()
                         }
                         drawLayer(graphicsLayer)
-                    }.shadow(18.dp),
+                    },
                     theme = theme,
                 )
             }
