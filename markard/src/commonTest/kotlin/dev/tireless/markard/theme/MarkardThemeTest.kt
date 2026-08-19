@@ -25,4 +25,14 @@ class MarkardThemeTest {
         assertNotEquals(xiaohongshu.card.background, midnight.card.background)
         assertNotEquals(xiaohongshu.inlines.strong.color, midnight.inlines.strong.color)
     }
+
+    @Test
+    fun fontShowcaseUsesAllBundledFontFamilies() {
+        val fonts = MarkardTheme.FontShowcase.fonts
+
+        assertEquals(MarkardFont.NotoSerifCjk, fonts.heading)
+        assertEquals(MarkardFont.NotoSansCjk, fonts.body)
+        assertEquals(MarkardFont.LxgwWenKai, fonts.accent)
+        assertEquals(MarkardFont.SarasaGothic, fonts.highlight)
+    }
 }

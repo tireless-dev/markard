@@ -6,3 +6,6 @@ build/
 /kotlin-js-store/wasm/
 local.properties
 .idea/
+
+# Downloaded local font resources (see scripts/download-fonts.sh)
+/markard/src/commonMain/composeResources/font/*.ttf

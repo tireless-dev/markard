@@ -11,10 +11,13 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.font.FontListFontFamily
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import markard.markard.generated.resources.*
+import org.jetbrains.compose.resources.Font as ResourceFont
 
 typealias MarkardDecoration = @Composable BoxScope.() -> Unit
 
@@ -32,6 +35,85 @@ data class MarkardDocumentTheme(
     val offset: DpOffset = DpOffset.Zero,
     val blockSpacing: Dp = 14.dp,
 )
+
+/** Local font families shipped with Markard. Noto is always the last fallback. */
+object MarkardFonts {
+    @Composable
+    fun notoSansCjk(fallbackOnly: Boolean = false) = androidx.compose.ui.text.font.FontFamily(
+        *if (fallbackOnly) {
+            arrayOf(ResourceFont(Res.font.noto_sans_cjk_sc, FontWeight.Normal))
+        } else {
+            arrayOf(
+                ResourceFont(Res.font.noto_sans_cjk_sc, FontWeight.Normal),
+                ResourceFont(Res.font.noto_sans_cjk_sc, FontWeight.Light),
+                ResourceFont(Res.font.noto_sans_cjk_sc, FontWeight.Medium),
+                ResourceFont(Res.font.noto_sans_cjk_sc, FontWeight.SemiBold),
+                ResourceFont(Res.font.noto_sans_cjk_sc, FontWeight.Bold),
+                ResourceFont(Res.font.noto_sans_cjk_sc, FontWeight.ExtraBold),
+                ResourceFont(Res.font.noto_sans_cjk_sc, FontWeight.Black),
+            )
+        },
+    )
+
+    @Composable
+    fun lxgwWenKai() = androidx.compose.ui.text.font.FontFamily(
+        ResourceFont(Res.font.lxgw_wenkai_regular, FontWeight.Normal),
+        ResourceFont(Res.font.lxgw_wenkai_regular, FontWeight.Light),
+        ResourceFont(Res.font.lxgw_wenkai_regular, FontWeight.Medium),
+        ResourceFont(Res.font.lxgw_wenkai_regular, FontWeight.SemiBold),
+        ResourceFont(Res.font.lxgw_wenkai_regular, FontWeight.Bold),
+        ResourceFont(Res.font.lxgw_wenkai_regular, FontWeight.ExtraBold),
+        ResourceFont(Res.font.lxgw_wenkai_regular, FontWeight.Black),
+    )
+
+    @Composable
+    fun notoSerifCjk() = androidx.compose.ui.text.font.FontFamily(
+        ResourceFont(Res.font.noto_serif_cjk_sc, FontWeight.Normal),
+        ResourceFont(Res.font.noto_serif_cjk_sc, FontWeight.Light),
+        ResourceFont(Res.font.noto_serif_cjk_sc, FontWeight.Medium),
+        ResourceFont(Res.font.noto_serif_cjk_sc, FontWeight.SemiBold),
+        ResourceFont(Res.font.noto_serif_cjk_sc, FontWeight.Bold),
+        ResourceFont(Res.font.noto_serif_cjk_sc, FontWeight.ExtraBold),
+        ResourceFont(Res.font.noto_serif_cjk_sc, FontWeight.Black),
+    )
+
+    @Composable
+    fun sarasaGothic() = androidx.compose.ui.text.font.FontFamily(
+        ResourceFont(Res.font.sarasa_gothic_sc_regular, FontWeight.Normal),
+        ResourceFont(Res.font.sarasa_gothic_sc_regular, FontWeight.Light),
+        ResourceFont(Res.font.sarasa_gothic_sc_regular, FontWeight.Medium),
+        ResourceFont(Res.font.sarasa_gothic_sc_regular, FontWeight.SemiBold),
+        ResourceFont(Res.font.sarasa_gothic_sc_regular, FontWeight.Bold),
+        ResourceFont(Res.font.sarasa_gothic_sc_regular, FontWeight.ExtraBold),
+        ResourceFont(Res.font.sarasa_gothic_sc_regular, FontWeight.Black),
+    )
+}
+
+enum class MarkardFont { NotoSansCjk, LxgwWenKai, NotoSerifCjk, SarasaGothic }
+
+data class MarkardFontTheme(
+    val heading: MarkardFont,
+    val body: MarkardFont,
+    val accent: MarkardFont,
+    val highlight: MarkardFont,
+)
+
+@Composable
+internal fun MarkardFont.resolve(): androidx.compose.ui.text.font.FontFamily = when (this) {
+    MarkardFont.NotoSansCjk -> MarkardFonts.notoSansCjk()
+    MarkardFont.LxgwWenKai -> androidx.compose.ui.text.font.FontFamily(
+        (MarkardFonts.lxgwWenKai() as FontListFontFamily).fonts +
+            (MarkardFonts.notoSansCjk(fallbackOnly = true) as FontListFontFamily).fonts,
+    )
+    MarkardFont.NotoSerifCjk -> androidx.compose.ui.text.font.FontFamily(
+        (MarkardFonts.notoSerifCjk() as FontListFontFamily).fonts +
+            (MarkardFonts.notoSansCjk(fallbackOnly = true) as FontListFontFamily).fonts,
+    )
+    MarkardFont.SarasaGothic -> androidx.compose.ui.text.font.FontFamily(
+        (MarkardFonts.sarasaGothic() as FontListFontFamily).fonts +
+            (MarkardFonts.notoSansCjk(fallbackOnly = true) as FontListFontFamily).fonts,
+    )
+}
 
 data class MarkardBlockTheme(
     val heading1: TextStyle,
@@ -66,6 +148,12 @@ data class MarkardTheme(
     val document: MarkardDocumentTheme,
     val blocks: MarkardBlockTheme,
     val inlines: MarkardInlineTheme,
+    val fonts: MarkardFontTheme = MarkardFontTheme(
+        heading = MarkardFont.NotoSansCjk,
+        body = MarkardFont.NotoSansCjk,
+        accent = MarkardFont.NotoSansCjk,
+        highlight = MarkardFont.NotoSansCjk,
+    ),
 ) {
     companion object {
         val Default = MarkardTheme(
@@ -94,6 +182,12 @@ data class MarkardTheme(
                 highlight = SpanStyle(fontWeight = FontWeight.Bold),
                 highlightStripe = Color(0xFFE8B98B),
             ),
+            fonts = MarkardFontTheme(
+                heading = MarkardFont.LxgwWenKai,
+                body = MarkardFont.NotoSansCjk,
+                accent = MarkardFont.LxgwWenKai,
+                highlight = MarkardFont.LxgwWenKai,
+            ),
         )
 
         val Minimal = MarkardTheme(
@@ -121,6 +215,12 @@ data class MarkardTheme(
                 accent = SpanStyle(fontWeight = FontWeight.Bold, color = Color(0xFF4F46E5)),
                 highlight = SpanStyle(fontWeight = FontWeight.Bold),
                 highlightStripe = Color(0xFFA5B4FC),
+            ),
+            fonts = MarkardFontTheme(
+                heading = MarkardFont.LxgwWenKai,
+                body = MarkardFont.NotoSansCjk,
+                accent = MarkardFont.LxgwWenKai,
+                highlight = MarkardFont.LxgwWenKai,
             ),
         )
 
@@ -174,6 +274,12 @@ data class MarkardTheme(
                 hashtagMarkerHeightFraction = 0.38f,
                 hashtagWaveAmplitude = 2.dp,
                 hashtagWaveLength = 11.dp,
+            ),
+            fonts = MarkardFontTheme(
+                heading = MarkardFont.LxgwWenKai,
+                body = MarkardFont.NotoSansCjk,
+                accent = MarkardFont.LxgwWenKai,
+                highlight = MarkardFont.LxgwWenKai,
             ),
         )
 
@@ -230,6 +336,47 @@ data class MarkardTheme(
                 hashtagWaveAmplitude = 1.5.dp,
                 hashtagWaveLength = 9.dp,
                 spacing = "\u200A",
+            ),
+            fonts = MarkardFontTheme(
+                heading = MarkardFont.NotoSansCjk,
+                body = MarkardFont.NotoSansCjk,
+                accent = MarkardFont.LxgwWenKai,
+                highlight = MarkardFont.LxgwWenKai,
+            ),
+        )
+
+        /** A diagnostic theme that exercises all bundled font families. */
+        val FontShowcase = MarkardTheme(
+            foreground = Color(0xFF25211E),
+            card = MarkardCardTheme(
+                background = Color(0xFFFFF8EC),
+                aspectRatio = 3f / 4f,
+                padding = 42.dp,
+                cornerRadius = 18.dp,
+            ),
+            document = MarkardDocumentTheme(blockSpacing = 18.dp),
+            blocks = MarkardBlockTheme(
+                heading1 = TextStyle(fontSize = 42.sp, lineHeight = 52.sp, fontWeight = FontWeight.Bold),
+                heading2 = TextStyle(fontSize = 32.sp, lineHeight = 42.sp, fontWeight = FontWeight.SemiBold),
+                body = TextStyle(fontSize = 19.sp, lineHeight = 30.sp),
+                quoteIndicator = Color(0xFFB56B45),
+                unorderedListMarkerColor = Color(0xFFB56B45),
+                orderedListMarkerBackground = Color(0xFFB56B45),
+                orderedListMarkerForeground = Color.White,
+            ),
+            inlines = MarkardInlineTheme(
+                strong = SpanStyle(fontWeight = FontWeight.Bold, color = Color(0xFF8B452D)),
+                emphasis = SpanStyle(fontStyle = FontStyle.Italic, color = Color(0xFF765D4F)),
+                code = SpanStyle(background = Color(0xFFEFE1CE)),
+                accent = SpanStyle(fontWeight = FontWeight.SemiBold, color = Color(0xFFB14E35)),
+                highlight = SpanStyle(fontWeight = FontWeight.SemiBold),
+                highlightStripe = Color(0xFFF0C36A),
+            ),
+            fonts = MarkardFontTheme(
+                heading = MarkardFont.NotoSerifCjk,
+                body = MarkardFont.NotoSansCjk,
+                accent = MarkardFont.LxgwWenKai,
+                highlight = MarkardFont.SarasaGothic,
             ),
         )
     }

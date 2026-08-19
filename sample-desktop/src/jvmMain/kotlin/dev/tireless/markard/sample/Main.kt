@@ -50,6 +50,7 @@ private val themeOptions = listOf(
     ThemeOption("Midnight", MarkardTheme.Midnight),
     ThemeOption("Default", MarkardTheme.Default),
     ThemeOption("Minimal", MarkardTheme.Minimal),
+    ThemeOption("字体测试", MarkardTheme.FontShowcase),
 )
 
 private val sampleMarkdown = """## 提升效率的 3 个小习惯｜亲测有效
@@ -161,7 +162,11 @@ private fun EditorPanel(
 
 @OptIn(InternalComposeUiApi::class)
 @Composable
-private fun PreviewPanel(markdown: String, theme: MarkardTheme, modifier: Modifier = Modifier) {
+private fun PreviewPanel(
+    markdown: String,
+    theme: MarkardTheme,
+    modifier: Modifier = Modifier,
+) {
     var message by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
     val graphicsContext = remember { SkiaGraphicsContext() }

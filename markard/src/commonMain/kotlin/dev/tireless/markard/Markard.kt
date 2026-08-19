@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import dev.tireless.markard.model.*
 import dev.tireless.markard.parser.MarkdownParser
 import dev.tireless.markard.theme.MarkardTheme
+import dev.tireless.markard.theme.resolve
 
 @Composable
 fun Markard(markdown: String, modifier: Modifier = Modifier, theme: MarkardTheme = MarkardTheme.Default) {
@@ -56,6 +57,8 @@ private fun MarkdownContent(
     theme: MarkardTheme,
     modifier: Modifier = Modifier,
 ) {
+    val headingFont = theme.fonts.heading.resolve()
+    val bodyFont = theme.fonts.body.resolve()
     Column(
         modifier,
         verticalArrangement = Arrangement.spacedBy(theme.document.blockSpacing),
@@ -65,12 +68,13 @@ private fun MarkdownContent(
                 is Block.Heading -> ThemedInlineText(
                     inlines = block.content,
                     theme = theme,
-                    style = (if (block.level == 1) theme.blocks.heading1 else theme.blocks.heading2).copy(color = theme.foreground),
+                    style = (if (block.level == 1) theme.blocks.heading1 else theme.blocks.heading2)
+                        .copy(color = theme.foreground, fontFamily = headingFont),
                 )
                 is Block.Paragraph -> ThemedInlineText(
                     inlines = block.content,
                     theme = theme,
-                    style = theme.blocks.body.copy(color = theme.foreground),
+                    style = theme.blocks.body.copy(color = theme.foreground, fontFamily = bodyFont),
                 )
                 is Block.Quote -> Row {
                     Box(Modifier.width(5.dp).height(28.dp).background(theme.blocks.quoteIndicator, RoundedCornerShape(50)))
@@ -78,7 +82,7 @@ private fun MarkdownContent(
                     ThemedInlineText(
                         inlines = block.content,
                         theme = theme,
-                        style = theme.blocks.body.copy(color = theme.foreground),
+                        style = theme.blocks.body.copy(color = theme.foreground, fontFamily = bodyFont),
                         modifier = Modifier.weight(1f),
                     )
                 }
@@ -100,7 +104,7 @@ private fun MarkdownContent(
                             ThemedInlineText(
                                 inlines = item.content,
                                 theme = theme,
-                                style = theme.blocks.body.copy(color = theme.foreground),
+                                style = theme.blocks.body.copy(color = theme.foreground, fontFamily = bodyFont),
                                 modifier = Modifier.weight(1f),
                             )
                         }
@@ -124,7 +128,7 @@ private fun MarkdownContent(
                             ThemedInlineText(
                                 inlines = item.content,
                                 theme = theme,
-                                style = theme.blocks.body.copy(color = theme.foreground),
+                                style = theme.blocks.body.copy(color = theme.foreground, fontFamily = bodyFont),
                                 modifier = Modifier.weight(1f),
                             )
                         }
@@ -148,7 +152,12 @@ private fun ThemedInlineText(
     style: TextStyle,
     modifier: Modifier = Modifier,
 ) {
-    val themedText = buildThemedText(inlines, theme)
+    val themedText = buildThemedText(
+        inlines,
+        theme,
+        accentFont = theme.fonts.accent.resolve(),
+        highlightFont = theme.fonts.highlight.resolve(),
+    )
     var layoutResult by remember(themedText.text) { mutableStateOf<TextLayoutResult?>(null) }
     val stripeColor = theme.inlines.highlightStripe
     val stripeFraction = theme.inlines.highlightStripeHeightFraction.coerceIn(0f, 1f)
@@ -186,11 +195,16 @@ private fun ThemedInlineText(
     )
 }
 
-internal fun buildThemedText(inlines: List<Inline>, theme: MarkardTheme): ThemedText {
+internal fun buildThemedText(
+    inlines: List<Inline>,
+    theme: MarkardTheme,
+    accentFont: androidx.compose.ui.text.font.FontFamily? = null,
+    highlightFont: androidx.compose.ui.text.font.FontFamily? = null,
+): ThemedText {
     val builder = AnnotatedString.Builder()
     val highlights = mutableListOf<TextRange>()
     val hashtags = mutableListOf<TextRange>()
-    appendInlines(builder, highlights, hashtags, inlines, theme)
+    appendInlines(builder, highlights, hashtags, inlines, theme, accentFont, highlightFont)
     return ThemedText(builder.toAnnotatedString(), highlights, hashtags)
 }
 
@@ -200,22 +214,24 @@ private fun appendInlines(
     hashtags: MutableList<TextRange>,
     inlines: List<Inline>,
     theme: MarkardTheme,
+    accentFont: androidx.compose.ui.text.font.FontFamily? = null,
+    highlightFont: androidx.compose.ui.text.font.FontFamily? = null,
 ) {
     inlines.forEach { inline ->
         when (inline) {
             is Inline.Text -> builder.append(inline.value)
             is Inline.Code -> appendStyled(builder, highlights, theme, theme.inlines.code) { builder.append(inline.value) }
             is Inline.Strong -> appendStyled(builder, highlights, theme, theme.inlines.strong) {
-                appendInlines(builder, highlights, hashtags, inline.content, theme)
+                appendInlines(builder, highlights, hashtags, inline.content, theme, accentFont, highlightFont)
             }
             is Inline.Emphasis -> appendStyled(builder, highlights, theme, theme.inlines.emphasis) {
-                appendInlines(builder, highlights, hashtags, inline.content, theme)
+                appendInlines(builder, highlights, hashtags, inline.content, theme, accentFont, highlightFont)
             }
-            is Inline.Accent -> appendStyled(builder, highlights, theme, theme.inlines.accent) {
-                appendInlines(builder, highlights, hashtags, inline.content, theme)
+            is Inline.Accent -> appendStyled(builder, highlights, theme, theme.inlines.accent.copy(fontFamily = accentFont ?: theme.inlines.accent.fontFamily)) {
+                appendInlines(builder, highlights, hashtags, inline.content, theme, accentFont, highlightFont)
             }
-            is Inline.Highlight -> appendStyled(builder, highlights, theme, theme.inlines.highlight, highlight = true) {
-                appendInlines(builder, highlights, hashtags, inline.content, theme)
+            is Inline.Highlight -> appendStyled(builder, highlights, theme, theme.inlines.highlight.copy(fontFamily = highlightFont ?: theme.inlines.highlight.fontFamily), highlight = true) {
+                appendInlines(builder, highlights, hashtags, inline.content, theme, accentFont, highlightFont)
             }
             is Inline.Hashtag -> {
                 builder.append(theme.inlines.spacing)
