@@ -3,5 +3,6 @@
 build/
 */build/
 *.hprof
+/kotlin-js-store/wasm/
 local.properties
 .idea/
