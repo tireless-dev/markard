@@ -18,6 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -25,8 +26,20 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.IntRect
 import dev.tireless.markard.Markard
 import dev.tireless.markard.theme.MarkardTheme
+import java.awt.FileDialog
+import java.awt.Rectangle
+import java.awt.Robot
+import java.awt.Toolkit
+import java.awt.datatransfer.DataFlavor
+import java.awt.datatransfer.Transferable
+import java.awt.image.BufferedImage
+import javax.imageio.ImageIO
 
 private val PlaygroundBackground = Color(0xFFF6F6F6)
 private val PanelBorder = Color(0xFFE8E8E8)
@@ -150,18 +163,159 @@ private fun EditorPanel(
 
 @Composable
 private fun PreviewPanel(markdown: String, theme: MarkardTheme, modifier: Modifier = Modifier) {
-    BoxWithConstraints(
-        modifier.background(Color(0xFFE3E4E6), RoundedCornerShape(18.dp)).padding(28.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        val aspectRatio = theme.card.aspectRatio ?: (3f / 4f)
-        val cardWidth = minOf(maxWidth, maxHeight * aspectRatio)
-        Box(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), contentAlignment = Alignment.TopCenter) {
-            Markard(
-                markdown,
-                modifier = Modifier.width(cardWidth).shadow(18.dp),
-                theme = theme,
-            )
+    var cardBounds by remember { mutableStateOf<IntRect?>(null) }
+    var message by remember { mutableStateOf<String?>(null) }
+    val cornerRadiusPx = with(LocalDensity.current) { theme.card.cornerRadius.toPx() }
+
+    Column(modifier) {
+        Row(
+            Modifier.fillMaxWidth().height(40.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.End,
+        ) {
+            message?.let {
+                Text(it, color = Color(0xFF777777), fontSize = 12.sp)
+                Spacer(Modifier.width(12.dp))
+            }
+            PreviewActionButton("复制图片") {
+                val result = capturePreviewCard(cardBounds, cornerRadiusPx, theme.card.background.toArgb())
+                if (result != null) {
+                    copyImageToClipboard(result)
+                    message = "已复制"
+                } else {
+                    message = "复制失败"
+                }
+            }
+            Spacer(Modifier.width(8.dp))
+            PreviewActionButton("导出 PNG") {
+                val result = capturePreviewCard(cardBounds, cornerRadiusPx, theme.card.background.toArgb())
+                if (result != null && exportImage(result)) {
+                    message = "已导出"
+                }
+            }
+        }
+        BoxWithConstraints(
+            Modifier.weight(1f).fillMaxWidth()
+                .background(Color(0xFFE3E4E6), RoundedCornerShape(18.dp)).padding(28.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            val aspectRatio = theme.card.aspectRatio ?: (3f / 4f)
+            val cardWidth = minOf(maxWidth, maxHeight * aspectRatio)
+            Box(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), contentAlignment = Alignment.TopCenter) {
+                Markard(
+                    markdown,
+                    modifier = Modifier.width(cardWidth)
+                        .onGloballyPositioned { coordinates ->
+                            val bounds = coordinates.boundsInWindow()
+                            cardBounds = IntRect(
+                                bounds.left.toInt(), bounds.top.toInt(),
+                                bounds.right.toInt(), bounds.bottom.toInt(),
+                            )
+                        }
+                        .shadow(18.dp),
+                    theme = theme,
+                )
+            }
         }
     }
 }
+
+@Composable
+private fun PreviewActionButton(label: String, onClick: () -> Unit) {
+    Box(
+        Modifier
+            .height(32.dp)
+            .clip(RoundedCornerShape(9.dp))
+            .background(Color.White)
+            .border(1.dp, PanelBorder, RoundedCornerShape(9.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(label, color = Color(0xFF555555), fontSize = 12.sp, fontWeight = FontWeight.Medium)
+    }
+}
+
+private fun capturePreviewCard(bounds: IntRect?, cornerRadiusPx: Float, backgroundArgb: Int): BufferedImage? {
+    if (bounds == null || bounds.width <= 0 || bounds.height <= 0) return null
+    return runCatching {
+        val window = java.awt.Window.getWindows().firstOrNull { it.isActive && it.isShowing }
+            ?: return null
+        val location = window.locationOnScreen
+        val insets = window.insets
+        val captured = Robot().createScreenCapture(
+            Rectangle(
+                location.x + insets.left + bounds.left,
+                location.y + insets.top + bounds.top,
+                bounds.width,
+                bounds.height,
+            ),
+        )
+        val image = BufferedImage(captured.width, captured.height, BufferedImage.TYPE_INT_ARGB)
+        val graphics = image.createGraphics()
+        graphics.drawImage(captured, 0, 0, null)
+        graphics.dispose()
+        removeTransparentCornerBackground(image, cornerRadiusPx * image.width / bounds.width, backgroundArgb)
+        image
+    }.getOrNull()
+}
+
+private fun removeTransparentCornerBackground(image: BufferedImage, cornerRadius: Float, backgroundArgb: Int) {
+    val radius = cornerRadius.coerceIn(0f, minOf(image.width, image.height) / 2f)
+    val lastX = image.width - 1
+    val lastY = image.height - 1
+
+    for (y in 0 until image.height) {
+        for (x in 0 until image.width) {
+            val distance = when {
+                x < radius && y < radius -> distance(x + 0.5f, y + 0.5f, radius, radius)
+                x > lastX - radius && y < radius -> distance(x + 0.5f, y + 0.5f, image.width - radius, radius)
+                x < radius && y > lastY - radius -> distance(x + 0.5f, y + 0.5f, radius, image.height - radius)
+                x > lastX - radius && y > lastY - radius -> distance(
+                    x + 0.5f,
+                    y + 0.5f,
+                    image.width - radius,
+                    image.height - radius,
+                )
+                else -> 0f
+            }
+            val coverage = (radius - distance).coerceIn(0f, 1f)
+            if (coverage <= 0f) {
+                image.setRGB(x, y, image.getRGB(x, y) and 0x00FFFFFF)
+            } else if (coverage < 1f) {
+                val alpha = ((backgroundArgb ushr 24) * coverage).toInt().coerceIn(0, 255)
+                image.setRGB(x, y, (alpha shl 24) or (backgroundArgb and 0x00FFFFFF))
+            }
+        }
+    }
+}
+
+private fun distance(x: Float, y: Float, centerX: Float, centerY: Float): Float {
+    val dx = x - centerX
+    val dy = y - centerY
+    return kotlin.math.sqrt(dx * dx + dy * dy)
+}
+
+private fun copyImageToClipboard(image: BufferedImage) {
+    val transferable = object : Transferable {
+        override fun getTransferDataFlavors() = arrayOf(DataFlavor.imageFlavor)
+        override fun isDataFlavorSupported(flavor: DataFlavor) = flavor == DataFlavor.imageFlavor
+        override fun getTransferData(flavor: DataFlavor): Any {
+            if (!isDataFlavorSupported(flavor)) throw java.awt.datatransfer.UnsupportedFlavorException(flavor)
+            return image
+        }
+    }
+    Toolkit.getDefaultToolkit().systemClipboard.setContents(transferable, null)
+}
+
+private fun exportImage(image: BufferedImage): Boolean = runCatching {
+    val owner = java.awt.Window.getWindows().firstOrNull { it.isActive && it.isShowing }
+    val dialog = FileDialog(owner as? java.awt.Frame, "导出预览图片", FileDialog.SAVE).apply {
+        file = "markard-card.png"
+        isVisible = true
+    }
+    val selectedFile = dialog.file?.let { if (it.endsWith(".png", ignoreCase = true)) it else "$it.png" }
+        ?: return false
+    val selectedDirectory = dialog.directory ?: return false
+    ImageIO.write(image, "png", java.io.File(selectedDirectory, selectedFile))
+}.getOrDefault(false)
