@@ -1,24 +1,167 @@
 package dev.tireless.markard.sample
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.*
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Window
+import androidx.compose.ui.window.application
+import androidx.compose.ui.window.rememberWindowState
 import dev.tireless.markard.Markard
 import dev.tireless.markard.theme.MarkardTheme
 
+private val PlaygroundBackground = Color(0xFFF6F6F6)
+private val PanelBorder = Color(0xFFE8E8E8)
+private val XiaohongshuRed = Color(0xFFFF2442)
+
+private data class ThemeOption(val label: String, val theme: MarkardTheme)
+
+private val themeOptions = listOf(
+    ThemeOption("小红书", MarkardTheme.Xiaohongshu),
+    ThemeOption("Midnight", MarkardTheme.Midnight),
+    ThemeOption("Default", MarkardTheme.Default),
+    ThemeOption("Minimal", MarkardTheme.Minimal),
+)
+
+private val sampleMarkdown = """## 提升效率的 3 个小习惯｜亲测有效
+
+1. 早上先完成^^最重要^^的一件事
+2. 把大目标拆成 ==30 分钟==的小任务
+3. 工作时**关闭**不必要的消息提醒
+
+不需要一下子改变很多
+
+每天进步一点点
+
+坚持下来就会看到变化
+
+#效率提升 #自我管理 #成长记录
+
+> 我是雷一猴"""
+
 fun main() = application {
-    Window(onCloseRequest = ::exitApplication, title = "Markard Playground", state = rememberWindowState(width = 1100.dp, height = 720.dp)) {
+    Window(
+        onCloseRequest = ::exitApplication,
+        title = "Markard Studio",
+        state = rememberWindowState(width = 1180.dp, height = 780.dp),
+    ) {
         MaterialTheme {
-            Surface(Modifier.fillMaxSize()) {
-                var markdown by remember { mutableStateOf("# Hello, Markard\n\nA **polished** Markdown card.\n\n> Compose-native and shareable.") }
-                Row(Modifier.fillMaxSize().padding(24.dp)) {
-                    Text(markdown, modifier = Modifier.width(360.dp).padding(16.dp))
-                    Markard(markdown, modifier = Modifier.width(520.dp).padding(16.dp), theme = MarkardTheme.Default)
+            var markdown by remember { mutableStateOf(sampleMarkdown) }
+            var selectedTheme by remember { mutableStateOf(themeOptions.first()) }
+
+            Surface(Modifier.fillMaxSize(), color = PlaygroundBackground) {
+                Row(
+                    Modifier.fillMaxSize().padding(24.dp),
+                    horizontalArrangement = Arrangement.spacedBy(24.dp),
+                ) {
+                    Column(Modifier.weight(0.9f).fillMaxHeight()) {
+                        ThemeButtonGroup(
+                            selected = selectedTheme,
+                            onSelected = { selectedTheme = it },
+                        )
+                        Spacer(Modifier.height(12.dp))
+                        EditorPanel(
+                            markdown = markdown,
+                            onMarkdownChange = { markdown = it },
+                            modifier = Modifier.weight(1f).fillMaxWidth(),
+                        )
+                    }
+                    PreviewPanel(
+                        markdown = markdown,
+                        theme = selectedTheme.theme,
+                        modifier = Modifier.weight(1.1f).fillMaxHeight(),
+                    )
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun ThemeButtonGroup(
+    selected: ThemeOption,
+    onSelected: (ThemeOption) -> Unit,
+) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .height(40.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color.White, RoundedCornerShape(12.dp))
+            .border(1.dp, PanelBorder, RoundedCornerShape(12.dp)),
+    ) {
+        themeOptions.forEachIndexed { index, option ->
+            if (index > 0) Box(Modifier.fillMaxHeight().width(1.dp).background(PanelBorder))
+            Box(
+                Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .background(if (option == selected) Color(0xFF242424) else Color.Transparent)
+                    .clickable { onSelected(option) },
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    option.label,
+                    color = if (option == selected) Color.White else Color(0xFF666666),
+                    fontSize = 12.sp,
+                    fontWeight = if (option == selected) FontWeight.Bold else FontWeight.Medium,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun EditorPanel(
+    markdown: String,
+    onMarkdownChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) = BasicTextField(
+    value = markdown,
+    onValueChange = onMarkdownChange,
+    modifier = modifier
+        .background(Color.White, RoundedCornerShape(18.dp))
+        .border(1.dp, PanelBorder, RoundedCornerShape(18.dp))
+        .padding(24.dp),
+    textStyle = TextStyle(color = Color(0xFF333333), fontSize = 17.sp, lineHeight = 28.sp),
+    cursorBrush = SolidColor(XiaohongshuRed),
+    decorationBox = { innerTextField ->
+        Box(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) { innerTextField() }
+    },
+)
+
+@Composable
+private fun PreviewPanel(markdown: String, theme: MarkardTheme, modifier: Modifier = Modifier) {
+    BoxWithConstraints(
+        modifier.background(Color(0xFFE3E4E6), RoundedCornerShape(18.dp)).padding(28.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        val aspectRatio = theme.card.aspectRatio ?: (3f / 4f)
+        val cardWidth = minOf(maxWidth, maxHeight * aspectRatio)
+        Box(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), contentAlignment = Alignment.TopCenter) {
+            Markard(
+                markdown,
+                modifier = Modifier.width(cardWidth).shadow(18.dp),
+                theme = theme,
+            )
         }
     }
 }

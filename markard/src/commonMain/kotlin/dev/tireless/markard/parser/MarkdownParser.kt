@@ -3,12 +3,14 @@ package dev.tireless.markard.parser
 import dev.tireless.markard.model.*
 
 object MarkdownParser {
+    private val orderedListItem = Regex("^(\\d+)\\.\\s+(.+)$")
+
     fun parse(markdown: String): MarkardDocument {
         val lines = markdown.trim().lines()
         val blocks = buildList {
             var index = 0
             while (index < lines.size) {
-                val line = lines[index].trimEnd()
+                val line = lines[index].trim()
                 when {
                     line.isBlank() -> index++
                     line.startsWith("# ") || line.startsWith("## ") -> {
@@ -25,10 +27,20 @@ object MarkdownParser {
                         }
                         add(Block.UnorderedList(items))
                     }
+                    orderedListItem.matches(line) -> {
+                        val start = orderedListItem.matchEntire(line)!!.groupValues[1].toInt()
+                        val items = buildList {
+                            while (index < lines.size) {
+                                val match = orderedListItem.matchEntire(lines[index].trim()) ?: break
+                                add(ListItem(parseInline(match.groupValues[2])))
+                                index++
+                            }
+                        }
+                        add(Block.OrderedList(items, start))
+                    }
                     else -> {
                         val paragraph = buildList {
-                            while (index < lines.size && lines[index].isNotBlank() &&
-                                lines[index].trimStart().let { !it.startsWith("# ") && !it.startsWith("## ") && !it.startsWith("> ") && !it.startsWith("- ") }) {
+                            while (index < lines.size && lines[index].isNotBlank() && !isBlockStart(lines[index])) {
                                 add(lines[index].trim()); index++
                             }
                         }.joinToString(" ")
@@ -40,18 +52,35 @@ object MarkdownParser {
         return MarkardDocument(blocks)
     }
 
+    private fun isBlockStart(value: String): Boolean {
+        val line = value.trim()
+        return line.startsWith("# ") ||
+            line.startsWith("## ") ||
+            line.startsWith("> ") ||
+            line.startsWith("- ") ||
+            orderedListItem.matches(line)
+    }
+
     private fun parseInline(value: String): List<Inline> {
         val result = mutableListOf<Inline>(); var remaining = value
         while (remaining.isNotEmpty()) {
-            val match = Regex("(\\*\\*|__|\\*|_|`)").find(remaining)
+            val match = Regex("(\\*\\*|__|==|\\^\\^|\\*|_|`|#[\\p{L}\\p{N}_-]+)").find(remaining)
             if (match == null) { result += Inline.Text(remaining); break }
             if (match.range.first > 0) result += Inline.Text(remaining.substring(0, match.range.first))
-            val marker = match.value; val end = remaining.indexOf(marker, match.range.last + 1)
+            val marker = match.value
+            if (marker.startsWith("#")) {
+                result += Inline.Hashtag(marker)
+                remaining = remaining.substring(match.range.last + 1)
+                continue
+            }
+            val end = remaining.indexOf(marker, match.range.last + 1)
             if (end < 0) { result += Inline.Text(remaining); break }
             val raw = remaining.substring(match.range.last + 1, end)
             result += when (marker) {
                 "`" -> Inline.Code(raw)
                 "**", "__" -> Inline.Strong(parseInline(raw))
+                "^^" -> Inline.Accent(parseInline(raw))
+                "==" -> Inline.Highlight(parseInline(raw))
                 else -> Inline.Emphasis(parseInline(raw))
             }
             remaining = remaining.substring(end + marker.length)

@@ -130,13 +130,17 @@ MarkardDocument
 ├── Heading(level, content)
 ├── Paragraph(content)
 ├── Quote(content)
-└── UnorderedList(items)
+├── UnorderedList(items)
+└── OrderedList(items, start)
 
 Inline
 ├── Text
 ├── Strong
 ├── Emphasis
-└── Code
+├── Code
+├── Accent
+├── Highlight
+└── Hashtag
 ```
 
 The v0.1 parsing target is:
@@ -151,24 +155,32 @@ Paragraph
 *Italic*
 `Inline code`
 
+^^Accent color^^
+==Highlight==
+#Hashtag
+
 > Quote
 
 - List item
 - List item
+
+1. Ordered item
+2. Ordered item
 ```
 
-Full CommonMark compatibility is not a v0.1 goal. Tables, footnotes, raw HTML,
+`^^...^^` and `==...==` are deliberate card-oriented extensions rather than
+CommonMark syntax. Full CommonMark compatibility is not a v0.1 goal. Tables, footnotes, raw HTML,
 embedded media, complex nested lists, task lists, images, and custom extensions
 may be considered later if they support the card use case.
 
 ## Rendering and layout
 
 Markard renders a card, not a generic scrollable Markdown document. The
-preferred layout is a configured or theme-defined width with content-driven
-height:
+preferred layout is a configured width with either content-driven height or a
+theme-defined aspect ratio:
 
 ```text
-fixed/configured width + content-driven height = predictable card bounds
+configured width + content height/aspect ratio = predictable card bounds
 ```
 
 Rendering should stay deterministic and Compose-native. Image capture, when
@@ -187,15 +199,30 @@ difference in its platform source set.
 
 ## Themes
 
-Themes are a first-class capability, not only color presets. A theme may control
-card width, padding, background, corner radius, typography, heading scale and
-spacing, paragraph spacing, list markers, quote treatment, code treatment,
-density, decorative elements, and footer treatment.
+Themes are a first-class rendering structure, not color presets. Markdown
+parsing produces semantics only; every visual decision is supplied separately:
 
-The first differentiated themes are `Default` and `Minimal`. Additional themes
-such as Editorial, Paper, Dark, Terminal, Quote, Poster, WeChat, or Xiaohongshu
-are future options, not v0.1 commitments. The API should allow custom themes
-without requiring consumers to fork the renderer.
+```text
+MarkardTheme
+├── card       canvas, ratio, padding, radius, decoration slot
+├── document   alignment, width, offset, block spacing
+├── blocks     heading/body styles, quote and list treatment
+└── inlines    strong/emphasis/code/accent/highlight styles and spacing
+```
+
+Background decorations are theme-owned composable slots. The Markdown renderer
+does not know that the Xiaohongshu theme draws a large quotation mark and a
+bottom dash. Document placement is also supplied by the theme.
+
+Every non-plain inline span receives theme-defined leading and trailing spacing.
+`==...==` is drawn as a theme-controlled stripe behind the bottom portion of the
+glyphs rather than a full background rectangle. `**...**` changes both weight
+and color according to the active theme.
+
+`Xiaohongshu` and the structurally different `Midnight` theme exercise the same
+renderer with different decoration slots, document placement, typography,
+inline styles, and highlight geometry. `Default` and `Minimal` remain basic
+library presets.
 
 ## Public API direction
 
@@ -232,8 +259,8 @@ Web:     ImageBitmap → Blob/download
 ## Desktop development host
 
 `sample-desktop` is the primary v0.1 development host. It should provide a
-small, utilitarian playground for live Markdown input, theme switching, card
-preview, capture/export experiments, visual regression checks, and library
+small, focused playground for live Markdown input, a single 3:4 card preview,
+capture/export experiments, visual regression checks, and library
 demonstration.
 
 Editing belongs only to this application. It must not leak into the `markard`
@@ -248,18 +275,16 @@ Implemented in the repository today:
 - internal Markdown parser for the initial subset;
 - Compose renderer for headings, paragraphs, quotes, lists, and inline styles;
 - `Default` and `Minimal` themes;
-- desktop sample that renders a fixed example and consumes the library;
+- desktop sample with editable raw Markdown and a fixed 3:4 Xiaohongshu card preview;
 - common parser tests.
 
 Next milestones:
 
-1. Improve the desktop playground with editable Markdown, live preview, and a
-   theme selector.
-2. Validate the initial Markdown subset with common tests and edge cases.
-3. Investigate shared capture through `GraphicsLayer` and `ImageBitmap`.
-4. Demonstrate capture/export in the desktop host without moving persistence or
+1. Validate the initial Markdown subset with common tests and edge cases.
+2. Investigate shared capture through `GraphicsLayer` and `ImageBitmap`.
+3. Demonstrate capture/export in the desktop host without moving persistence or
    sharing into the library.
-5. Keep Android, iOS, JVM, and Wasm compilation green as dependencies evolve.
+4. Keep Android, iOS, JVM, and Wasm compilation green as dependencies evolve.
 
 ## Non-goals for v0.1
 
