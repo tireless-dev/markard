@@ -43,6 +43,14 @@ The renderer also includes `MarkardTheme.Midnight` as a structurally different
 theme: it changes the backdrop, decorations, document position, typography,
 inline colors, spacing, and highlight geometry without changing Markdown logic.
 
+## Multiple cards
+
+Use `MarkdownParser.parseSections(markdown)` when one Markdown input should
+produce multiple cards. A level-two heading (`## ...`) starts a new card and a
+standalone `--` line separates cards; the heading remains in the card it starts.
+`MarkardPages(markdown, theme = theme)` renders the resulting cards as a
+vertical collection. `Markard(markdown)` keeps its single-card behavior.
+
 ## Local fonts
 
 The library uses Noto Sans CJK SC as the default local fallback, with LXGW

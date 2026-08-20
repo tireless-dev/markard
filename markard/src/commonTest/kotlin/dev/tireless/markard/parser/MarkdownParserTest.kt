@@ -69,4 +69,29 @@ class MarkdownParserTest {
             document.blocks.single(),
         )
     }
+
+    @Test fun splitsSectionsAtLevelTwoHeadingsAndDashSeparators() {
+        val documents = MarkdownParser.parseSections(
+            """引言
+
+## 第一张
+内容一
+--
+## 第二张
+内容二
+""".trimIndent(),
+        )
+
+        assertEquals(3, documents.size)
+        assertEquals(Block.Paragraph(listOf(Inline.Text("引言"))), documents[0].blocks.single())
+        assertEquals(Block.Heading(2, listOf(Inline.Text("第一张"))), documents[1].blocks[0])
+        assertEquals(Block.Heading(2, listOf(Inline.Text("第二张"))), documents[2].blocks[0])
+    }
+
+    @Test fun ignoresEmptySectionsAndOnlySplitsStandaloneDashLine() {
+        val documents = MarkdownParser.parseSections("--\n## 标题\n价格 -- 不是分隔线\n--\n")
+
+        assertEquals(1, documents.size)
+        assertEquals(2, documents.single().blocks.size)
+    }
 }

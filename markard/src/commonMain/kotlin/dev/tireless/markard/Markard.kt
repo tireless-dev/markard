@@ -51,6 +51,43 @@ fun Markard(markdown: String, modifier: Modifier = Modifier, theme: MarkardTheme
     }
 }
 
+/** Renders one card for every section separated by a level-two heading or `--`. */
+@Composable
+fun MarkardPages(
+    markdown: String,
+    modifier: Modifier = Modifier,
+    theme: MarkardTheme = MarkardTheme.Default,
+) {
+    val documents = remember(markdown) { MarkdownParser.parseSections(markdown) }
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(theme.document.blockSpacing)) {
+        documents.forEach { document ->
+            MarkardDocumentCard(document, theme)
+        }
+    }
+}
+
+@Composable
+private fun MarkardDocumentCard(document: MarkardDocument, theme: MarkardTheme) {
+    val card = theme.card
+    Box(
+        Modifier
+            .then(card.aspectRatio?.let { Modifier.aspectRatio(it) } ?: Modifier)
+            .clip(RoundedCornerShape(card.cornerRadius))
+            .background(card.background)
+            .padding(card.padding),
+    ) {
+        card.decoration(this)
+        MarkdownContent(
+            document = document,
+            theme = theme,
+            modifier = Modifier
+                .align(theme.document.alignment)
+                .fillMaxWidth(theme.document.widthFraction)
+                .offset(theme.document.offset.x, theme.document.offset.y),
+        )
+    }
+}
+
 @Composable
 private fun MarkdownContent(
     document: MarkardDocument,
