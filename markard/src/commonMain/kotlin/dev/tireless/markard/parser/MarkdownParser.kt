@@ -4,9 +4,49 @@ import dev.tireless.markard.model.*
 
 object MarkdownParser {
     private val orderedListItem = Regex("^(\\d+)\\.\\s+(.+)$")
+    private val sectionHeading = Regex("^##\\s+.+$")
 
     fun parse(markdown: String): MarkardDocument {
         val lines = markdown.trim().lines()
+        return parseDocument(lines)
+    }
+
+    /**
+     * Splits a markdown document into card-sized sections.
+     *
+     * A level-two heading starts a new section and a line containing only
+     * `--` separates two sections. Separators are not included in the output.
+     * Empty sections are ignored, so leading/trailing or repeated separators
+     * are harmless.
+     */
+    fun parseSections(markdown: String): List<MarkardDocument> = splitSections(markdown)
+        .map(::parseDocument)
+
+    internal fun splitSections(markdown: String): List<List<String>> {
+        val sections = mutableListOf<MutableList<String>>()
+        var current = mutableListOf<String>()
+
+        fun flush() {
+            if (current.any { it.isNotBlank() }) sections += current
+            current = mutableListOf()
+        }
+
+        markdown.lines().forEach { rawLine ->
+            val line = rawLine.trim()
+            when {
+                sectionHeading.matches(line) && current.any { it.isNotBlank() } -> {
+                    flush()
+                    current += rawLine
+                }
+                line == "--" -> flush()
+                else -> current += rawLine
+            }
+        }
+        flush()
+        return sections
+    }
+
+    private fun parseDocument(lines: List<String>): MarkardDocument {
         val blocks = buildList {
             var index = 0
             while (index < lines.size) {
