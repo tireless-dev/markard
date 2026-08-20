@@ -33,6 +33,7 @@ kotlin {
       implementation(libs.compose.ui)
       implementation(libs.compose.material3)
       implementation(compose.components.resources)
+      implementation(libs.jetbrains.markdown)
     }
     commonTest.dependencies { implementation(kotlin("test")) }
   }

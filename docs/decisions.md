@@ -6,7 +6,7 @@ and supersession history belong here.
 
 ## ADR-0001: Keep Markard as a single KMP Compose library for v0.1
 
-**Status:** Accepted  
+**Status:** Accepted
 **Date:** 2026-08-19
 
 ### Context
@@ -64,3 +64,34 @@ than a second renderer.
 
 The desktop sample must be able to capture the same rendered card it displays;
 platform persistence and sharing must remain outside `:markard`.
+
+## ADR-0003: Use JetBrains Markdown for shared Markdown parsing
+
+**Status:** Accepted
+**Date:** 2026-08-20
+
+### Context
+
+The initial parser was a small handwritten subset parser. Markard targets JVM,
+Android, iOS, and Wasm, so a replacement must work from `commonMain` and expose
+an AST that can be adapted to the card renderer.
+
+### Decision
+
+Use `org.jetbrains:markdown` as the shared parser.
+Keep a narrow adapter in `parser/MarkdownParser.kt` for the `MarkardDocument`
+model and card section splitting. The dependency is isolated behind that
+adapter so the renderer does not depend on the third-party AST.
+
+### Rationale
+
+JetBrains Markdown is an official JetBrains project, is published to Maven
+Central under Apache 2.0, is pure Kotlin/KMP, supports Native and JS targets,
+and exposes an AST suitable for this adapter. The project-specific `^^...^^`
+and `==...==` syntax was dropped instead of adding a custom flavour for two
+non-standard constructs.
+
+### Consequences
+
+Standard Markdown parsing becomes more complete and spec-compliant. The
+adapter is intentionally the only place that references the JetBrains AST.

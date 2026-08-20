@@ -34,8 +34,6 @@ Inline Markdown semantics are rendered by the active theme:
 ```markdown
 **strong with a theme-defined color**
 *theme-defined emphasis*
-^^accent-colored text^^
-==bottom-stripe highlight==
 #hashtag-with-marker-wave
 ```
 
@@ -47,7 +45,8 @@ inline colors, spacing, and highlight geometry without changing Markdown logic.
 
 Use `MarkdownParser.parseSections(markdown)` when one Markdown input should
 produce multiple cards. A level-two heading (`## ...`) starts a new card and a
-standalone `--` line separates cards; the heading remains in the card it starts.
+level-two headings and standalone `---` lines start new cards; the heading
+remains in the card it starts.
 `MarkardPages(markdown, theme = theme)` renders the resulting cards as a
 vertical collection. `Markard(markdown)` keeps its single-card behavior.
 
@@ -67,6 +66,6 @@ fonts missing from `main`, then automatically copies them into the current
 worktree. Creating additional worktrees therefore does not download the fonts
 again. The script requires `curl` and `bsdtar`.
 
-`MarkardFontTheme` lets themes choose different families for headings, body
-text, `^^accent^^`, and `==highlight==`. Each non-Noto family falls back to a
-lighter Normal-weight Noto Sans CJK SC glyph when a glyph is unavailable.
+`MarkardFontTheme` lets themes choose different families for headings and body
+text. Each non-Noto family falls back to a lighter Normal-weight Noto Sans CJK
+SC glyph when a glyph is unavailable.

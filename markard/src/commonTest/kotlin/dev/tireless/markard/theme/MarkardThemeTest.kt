@@ -23,7 +23,7 @@ class MarkardThemeTest {
         assertEquals(Alignment.TopStart, midnight.document.alignment)
         assertEquals(0.32f, midnight.inlines.highlightStripeHeightFraction)
         assertNotEquals(xiaohongshu.card.background, midnight.card.background)
-        assertNotEquals(xiaohongshu.inlines.strong.color, midnight.inlines.strong.color)
+        assertNotEquals(xiaohongshu.inlines.bold.color, midnight.inlines.bold.color)
     }
 
     @Test
@@ -32,7 +32,7 @@ class MarkardThemeTest {
 
         assertEquals(MarkardFont.NotoSerifCjk, fonts.heading)
         assertEquals(MarkardFont.NotoSansCjk, fonts.body)
-        assertEquals(MarkardFont.LxgwWenKai, fonts.accent)
-        assertEquals(MarkardFont.SarasaGothic, fonts.highlight)
+        assertEquals(MarkardFont.LxgwWenKai, fonts.bold)
+        assertEquals(MarkardFont.SarasaGothic, fonts.emphasis)
     }
 }

@@ -9,6 +9,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.font.FontListFontFamily
@@ -94,8 +95,8 @@ enum class MarkardFont { NotoSansCjk, LxgwWenKai, NotoSerifCjk, SarasaGothic }
 data class MarkardFontTheme(
     val heading: MarkardFont,
     val body: MarkardFont,
-    val accent: MarkardFont,
-    val highlight: MarkardFont,
+    val bold: MarkardFont,
+    val emphasis: MarkardFont,
 )
 
 @Composable
@@ -124,22 +125,25 @@ data class MarkardBlockTheme(
     val unorderedListMarkerColor: Color,
     val orderedListMarkerBackground: Color,
     val orderedListMarkerForeground: Color,
+    val heading3: TextStyle = heading2,
+    val heading4: TextStyle = heading3,
+    val heading5: TextStyle = heading4,
+    val heading6: TextStyle = heading5,
 )
 
 data class MarkardInlineTheme(
-    val strong: SpanStyle,
+    val bold: SpanStyle,
     val emphasis: SpanStyle,
     val code: SpanStyle,
-    val accent: SpanStyle,
-    val highlight: SpanStyle,
     val highlightStripe: Color,
     val highlightStripeHeightFraction: Float = 0.2f,
-    val hashtag: SpanStyle = accent,
+    val hashtag: SpanStyle = bold,
     val hashtagMarker: Color = highlightStripe,
     val hashtagMarkerHeightFraction: Float = 0.34f,
     val hashtagWaveAmplitude: Dp = 2.dp,
     val hashtagWaveLength: Dp = 10.dp,
     val spacing: String = "\u2009",
+    val strikethrough: SpanStyle = SpanStyle(textDecoration = TextDecoration.LineThrough),
 )
 
 data class MarkardTheme(
@@ -151,8 +155,8 @@ data class MarkardTheme(
     val fonts: MarkardFontTheme = MarkardFontTheme(
         heading = MarkardFont.NotoSansCjk,
         body = MarkardFont.NotoSansCjk,
-        accent = MarkardFont.NotoSansCjk,
-        highlight = MarkardFont.NotoSansCjk,
+        bold = MarkardFont.NotoSansCjk,
+        emphasis = MarkardFont.NotoSansCjk,
     ),
 ) {
     companion object {
@@ -175,18 +179,16 @@ data class MarkardTheme(
                 orderedListMarkerForeground = Color.White,
             ),
             inlines = MarkardInlineTheme(
-                strong = SpanStyle(fontWeight = FontWeight.ExtraBold, color = Color(0xFF9B4326)),
-                emphasis = SpanStyle(fontStyle = FontStyle.Italic, color = Color(0xFF765D4F)),
                 code = SpanStyle(background = Color(0xFFE8DED0)),
-                accent = SpanStyle(fontWeight = FontWeight.Bold, color = Color(0xFFB85C38)),
-                highlight = SpanStyle(fontWeight = FontWeight.Bold),
+                bold = SpanStyle(fontWeight = FontWeight.Bold, color = Color(0xFFB85C38)),
+                emphasis = SpanStyle(fontWeight = FontWeight.Bold),
                 highlightStripe = Color(0xFFE8B98B),
             ),
             fonts = MarkardFontTheme(
                 heading = MarkardFont.LxgwWenKai,
                 body = MarkardFont.NotoSansCjk,
-                accent = MarkardFont.LxgwWenKai,
-                highlight = MarkardFont.LxgwWenKai,
+                bold = MarkardFont.LxgwWenKai,
+                emphasis = MarkardFont.LxgwWenKai,
             ),
         )
 
@@ -209,18 +211,16 @@ data class MarkardTheme(
                 orderedListMarkerForeground = Color.White,
             ),
             inlines = MarkardInlineTheme(
-                strong = SpanStyle(fontWeight = FontWeight.Bold, color = Color(0xFF3730A3)),
-                emphasis = SpanStyle(fontStyle = FontStyle.Italic, color = Color(0xFF52525B)),
                 code = SpanStyle(background = Color(0xFFF1F1F1)),
-                accent = SpanStyle(fontWeight = FontWeight.Bold, color = Color(0xFF4F46E5)),
-                highlight = SpanStyle(fontWeight = FontWeight.Bold),
+                bold = SpanStyle(fontWeight = FontWeight.Bold, color = Color(0xFF4F46E5)),
+                emphasis = SpanStyle(fontWeight = FontWeight.Bold),
                 highlightStripe = Color(0xFFA5B4FC),
             ),
             fonts = MarkardFontTheme(
                 heading = MarkardFont.LxgwWenKai,
                 body = MarkardFont.NotoSansCjk,
-                accent = MarkardFont.LxgwWenKai,
-                highlight = MarkardFont.LxgwWenKai,
+                bold = MarkardFont.LxgwWenKai,
+                emphasis = MarkardFont.LxgwWenKai,
             ),
         )
 
@@ -262,11 +262,9 @@ data class MarkardTheme(
                 orderedListMarkerForeground = Color.White,
             ),
             inlines = MarkardInlineTheme(
-                strong = SpanStyle(fontWeight = FontWeight.Black, color = Color(0xFF168C5B)),
-                emphasis = SpanStyle(fontStyle = FontStyle.Italic, color = Color(0xFF587852)),
                 code = SpanStyle(background = Color(0xFFBDF5B6), color = Color(0xFF30352F)),
-                accent = SpanStyle(fontWeight = FontWeight.Black, color = Color(0xFFFF5B45)),
-                highlight = SpanStyle(fontWeight = FontWeight.Black),
+                bold = SpanStyle(fontWeight = FontWeight.Black, color = Color(0xFFFF5B45)),
+                emphasis = SpanStyle(fontWeight = FontWeight.Black),
                 highlightStripe = Color(0xFFFFCA63),
                 highlightStripeHeightFraction = 0.2f,
                 hashtag = SpanStyle(fontWeight = FontWeight.Black, color = Color(0xFF245C35)),
@@ -278,8 +276,8 @@ data class MarkardTheme(
             fonts = MarkardFontTheme(
                 heading = MarkardFont.LxgwWenKai,
                 body = MarkardFont.NotoSansCjk,
-                accent = MarkardFont.LxgwWenKai,
-                highlight = MarkardFont.LxgwWenKai,
+                bold = MarkardFont.LxgwWenKai,
+                emphasis = MarkardFont.LxgwWenKai,
             ),
         )
 
@@ -323,11 +321,9 @@ data class MarkardTheme(
                 orderedListMarkerForeground = Color(0xFF171A24),
             ),
             inlines = MarkardInlineTheme(
-                strong = SpanStyle(fontWeight = FontWeight.Black, color = Color(0xFF78DCE8)),
-                emphasis = SpanStyle(fontStyle = FontStyle.Italic, color = Color(0xFFA9B1D6)),
                 code = SpanStyle(background = Color(0xFF2A2E3D), color = Color(0xFFFFD866)),
-                accent = SpanStyle(fontWeight = FontWeight.Black, color = Color(0xFFFF6B57)),
-                highlight = SpanStyle(fontWeight = FontWeight.Bold),
+                bold = SpanStyle(fontWeight = FontWeight.Black, color = Color(0xFFFF6B57)),
+                emphasis = SpanStyle(fontWeight = FontWeight.Bold),
                 highlightStripe = Color(0xFF8A6DFF),
                 highlightStripeHeightFraction = 0.32f,
                 hashtag = SpanStyle(fontWeight = FontWeight.Bold, color = Color(0xFF78DCE8)),
@@ -340,8 +336,8 @@ data class MarkardTheme(
             fonts = MarkardFontTheme(
                 heading = MarkardFont.NotoSansCjk,
                 body = MarkardFont.NotoSansCjk,
-                accent = MarkardFont.LxgwWenKai,
-                highlight = MarkardFont.LxgwWenKai,
+                bold = MarkardFont.LxgwWenKai,
+                emphasis = MarkardFont.LxgwWenKai,
             ),
         )
 
@@ -365,18 +361,16 @@ data class MarkardTheme(
                 orderedListMarkerForeground = Color.White,
             ),
             inlines = MarkardInlineTheme(
-                strong = SpanStyle(fontWeight = FontWeight.Bold, color = Color(0xFF8B452D)),
-                emphasis = SpanStyle(fontStyle = FontStyle.Italic, color = Color(0xFF765D4F)),
                 code = SpanStyle(background = Color(0xFFEFE1CE)),
-                accent = SpanStyle(fontWeight = FontWeight.SemiBold, color = Color(0xFFB14E35)),
-                highlight = SpanStyle(fontWeight = FontWeight.SemiBold),
+                bold = SpanStyle(fontWeight = FontWeight.SemiBold, color = Color(0xFFB14E35)),
+                emphasis = SpanStyle(fontWeight = FontWeight.SemiBold),
                 highlightStripe = Color(0xFFF0C36A),
             ),
             fonts = MarkardFontTheme(
                 heading = MarkardFont.NotoSerifCjk,
                 body = MarkardFont.NotoSansCjk,
-                accent = MarkardFont.LxgwWenKai,
-                highlight = MarkardFont.SarasaGothic,
+                bold = MarkardFont.LxgwWenKai,
+                emphasis = MarkardFont.SarasaGothic,
             ),
         )
     }

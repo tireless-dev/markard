@@ -13,16 +13,18 @@ class MarkdownParserTest {
         assertEquals(Block.Heading(1, listOf(Inline.Text("Hello"))), document.blocks.first())
     }
 
-    @Test fun parsesCardEmphasisExtensions() {
-        val document = MarkdownParser.parse("# Make it ^^red^^ and ==loud==")
+    @Test fun parsesStandardInlineFormatting() {
+        val document = MarkdownParser.parse("# Make it **bold** and *italic* with `code`")
         assertEquals(
             Block.Heading(
                 1,
                 listOf(
                     Inline.Text("Make it "),
-                    Inline.Accent(listOf(Inline.Text("red"))),
+                    Inline.Bold(listOf(Inline.Text("bold"))),
                     Inline.Text(" and "),
-                    Inline.Highlight(listOf(Inline.Text("loud"))),
+                    Inline.Emphasis(listOf(Inline.Text("italic"))),
+                    Inline.Text(" with "),
+                    Inline.Code("code"),
                 ),
             ),
             document.blocks.first(),
@@ -70,13 +72,15 @@ class MarkdownParserTest {
         )
     }
 
-    @Test fun splitsSectionsAtLevelTwoHeadingsAndDashSeparators() {
+    @Test fun splitsSectionsAtLevelTwoHeadingsOnly() {
         val documents = MarkdownParser.parseSections(
             """引言
 
 ## 第一张
 内容一
---
+
+---
+
 ## 第二张
 内容二
 """.trimIndent(),
@@ -88,11 +92,22 @@ class MarkdownParserTest {
         assertEquals(Block.Heading(2, listOf(Inline.Text("第二张"))), documents[2].blocks[0])
     }
 
-    @Test fun ignoresEmptySectionsAndOnlySplitsStandaloneDashLine() {
-        val documents = MarkdownParser.parseSections("--\n## 标题\n价格 -- 不是分隔线\n--\n")
+    @Test fun parsesHorizontalRuleForSingleDocuments() {
+        val document = MarkdownParser.parse("## 标题\n\n---\n\n内容\n")
 
-        assertEquals(1, documents.size)
-        assertEquals(2, documents.single().blocks.size)
+        assertEquals(3, document.blocks.size)
+        assertEquals(Block.HorizontalRule, document.blocks[1])
+    }
+
+    @Test fun parsesAdditionalHeadingLevelsStrikethroughAndTaskItems() {
+        val document = MarkdownParser.parse(
+            "### Third\n#### Fourth\n##### Fifth\n###### Sixth\n\n~~removed~~\n\n- [x] Done\n- [ ] Todo",
+        )
+
+        assertEquals(listOf(3, 4, 5, 6), document.blocks.take(4).map { (it as Block.Heading).level })
+        assertEquals(Block.Paragraph(listOf(Inline.Strikethrough(listOf(Inline.Text("removed"))))), document.blocks[4])
+        assertEquals(true, (document.blocks[5] as Block.UnorderedList).items[0].checked)
+        assertEquals(false, (document.blocks[5] as Block.UnorderedList).items[1].checked)
     }
 
     @Test fun exposesMarkdownForEveryPage() {
@@ -101,7 +116,7 @@ class MarkdownParserTest {
             MarkdownParser.splitIntoSections(
                 """## 第一页
 内容一
---
+---
 第二页
 ## 第三页
 内容三""",

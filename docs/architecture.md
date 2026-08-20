@@ -92,9 +92,11 @@ add it only if there is a concrete requirement to publish a JavaScript-consumabl
 package.
 
 Dependencies in `commonMain` must be compatible with every supported target.
-Prefer a KMP-compatible Markdown parser or the small internal parser when the
-supported Markdown subset does not justify a dependency. Avoid JVM-only APIs in
-shared code.
+Markdown parsing uses JetBrains' KMP-compatible `org.jetbrains:markdown`
+dependency in `commonMain`. The parser adapter maps its CommonMark AST to
+Markard's small render model and owns only hashtags and card section splitting.
+The former `^^...^^` and `==...==` extensions are intentionally not supported.
+Avoid JVM-only APIs in shared code.
 
 ## Internal architecture
 
@@ -130,16 +132,16 @@ MarkardDocument
 ├── Heading(level, content)
 ├── Paragraph(content)
 ├── Quote(content)
+├── HorizontalRule
 ├── UnorderedList(items)
 └── OrderedList(items, start)
 
 Inline
 ├── Text
-├── Strong
+├── Bold
 ├── Emphasis
 ├── Code
-├── Accent
-├── Highlight
+├── Strikethrough
 └── Hashtag
 ```
 
@@ -155,8 +157,6 @@ Paragraph
 *Italic*
 `Inline code`
 
-^^Accent color^^
-==Highlight==
 #Hashtag
 
 > Quote
@@ -168,10 +168,13 @@ Paragraph
 2. Ordered item
 ```
 
-`^^...^^` and `==...==` are deliberate card-oriented extensions rather than
-CommonMark syntax. Full CommonMark compatibility is not a v0.1 goal. Tables, footnotes, raw HTML,
-embedded media, complex nested lists, task lists, images, and custom extensions
-may be considered later if they support the card use case.
+The adapter currently exposes the card renderer's supported block and inline
+model. Standard `**strong**` maps to `Bold` and `*emphasis*` maps to `Emphasis`,
+which is rendered as the card's highlight stripe for Chinese content. GFM
+`~~strikethrough~~` maps to `Strikethrough`, and task-list items carry their
+checked state. Tables, footnotes, raw HTML, embedded media, complex nested
+lists, and images may be mapped to the model later if the card use case needs
+them.
 
 ## Rendering and layout
 
@@ -215,9 +218,7 @@ does not know that the Xiaohongshu theme draws a large quotation mark and a
 bottom dash. Document placement is also supplied by the theme.
 
 Every non-plain inline span receives theme-defined leading and trailing spacing.
-`==...==` is drawn as a theme-controlled stripe behind the bottom portion of the
-glyphs rather than a full background rectangle. `**...**` changes both weight
-and color according to the active theme.
+`**...**` changes both weight and color according to the active theme.
 
 `Xiaohongshu` and the structurally different `Midnight` theme exercise the same
 renderer with different decoration slots, document placement, typography,
@@ -272,7 +273,7 @@ Implemented in the repository today:
 
 - KMP/Compose library module with Android, iOS, JVM, and Wasm configuration;
 - `MarkardDocument` block and inline model;
-- internal Markdown parser for the initial subset;
+- JetBrains Markdown AST adapter for the supported card model;
 - Compose renderer for headings, paragraphs, quotes, lists, and inline styles;
 - `Default` and `Minimal` themes;
 - desktop sample with editable raw Markdown and a fixed 3:4 Xiaohongshu card preview;

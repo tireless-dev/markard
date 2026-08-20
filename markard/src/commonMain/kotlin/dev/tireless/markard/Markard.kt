@@ -1,6 +1,7 @@
 package dev.tireless.markard
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
@@ -13,6 +14,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.AnnotatedString
@@ -51,7 +54,7 @@ fun Markard(markdown: String, modifier: Modifier = Modifier, theme: MarkardTheme
     }
 }
 
-/** Renders one card for every section separated by a level-two heading or `--`. */
+/** Renders one card for every section separated by a level-two heading or `---`. */
 @Composable
 fun MarkardPages(
     markdown: String,
@@ -105,13 +108,23 @@ private fun MarkdownContent(
                 is Block.Heading -> ThemedInlineText(
                     inlines = block.content,
                     theme = theme,
-                    style = (if (block.level == 1) theme.blocks.heading1 else theme.blocks.heading2)
+                    style = (when (block.level) {
+                        1 -> theme.blocks.heading1
+                        2 -> theme.blocks.heading2
+                        3 -> theme.blocks.heading3
+                        4 -> theme.blocks.heading4
+                        5 -> theme.blocks.heading5
+                        else -> theme.blocks.heading6
+                    })
                         .copy(color = theme.foreground, fontFamily = headingFont),
                 )
                 is Block.Paragraph -> ThemedInlineText(
                     inlines = block.content,
                     theme = theme,
-                    style = theme.blocks.body.copy(color = theme.foreground, fontFamily = bodyFont),
+                        style = theme.blocks.body.copy(color = theme.foreground, fontFamily = bodyFont),
+                )
+                Block.HorizontalRule -> Box(
+                    Modifier.fillMaxWidth().height(1.dp).background(theme.blocks.quoteIndicator),
                 )
                 is Block.Quote -> Row {
                     Box(Modifier.width(5.dp).height(28.dp).background(theme.blocks.quoteIndicator, RoundedCornerShape(50)))
@@ -130,12 +143,16 @@ private fun MarkdownContent(
                                 Modifier.size(24.dp),
                                 contentAlignment = Alignment.Center,
                             ) {
-                                Text(
-                                    theme.blocks.unorderedListMarker,
-                                    color = theme.blocks.unorderedListMarkerColor,
-                                    fontSize = 20.sp,
-                                    fontWeight = FontWeight.Black,
-                                )
+                                if (item.checked != null) {
+                                    TaskMarker(item.checked, theme.blocks.unorderedListMarkerColor)
+                                } else {
+                                    Text(
+                                        theme.blocks.unorderedListMarker,
+                                        color = theme.blocks.unorderedListMarkerColor,
+                                        fontSize = 20.sp,
+                                        fontWeight = FontWeight.Black,
+                                    )
+                                }
                             }
                             Spacer(Modifier.width(10.dp))
                             ThemedInlineText(
@@ -154,12 +171,16 @@ private fun MarkdownContent(
                                 Modifier.size(24.dp).background(theme.blocks.orderedListMarkerBackground, RoundedCornerShape(50)),
                                 contentAlignment = Alignment.Center,
                             ) {
-                                Text(
-                                    "${block.start + index}",
-                                    color = theme.blocks.orderedListMarkerForeground,
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                )
+                                if (item.checked != null) {
+                                    TaskMarker(item.checked, theme.blocks.orderedListMarkerForeground)
+                                } else {
+                                    Text(
+                                        "${block.start + index}",
+                                        color = theme.blocks.orderedListMarkerForeground,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                    )
+                                }
                             }
                             Spacer(Modifier.width(10.dp))
                             ThemedInlineText(
@@ -174,6 +195,34 @@ private fun MarkdownContent(
             }
         }
     }
+}
+
+@Composable
+private fun TaskMarker(checked: Boolean, color: Color) {
+    Box(
+        Modifier
+            .size(16.dp)
+            .border(1.5.dp, color, RoundedCornerShape(3.dp))
+            .drawBehind {
+                if (checked) {
+                    val side = size.minDimension
+                    drawLine(
+                        color = color,
+                        start = Offset(side * 0.2f, side * 0.52f),
+                        end = Offset(side * 0.43f, side * 0.76f),
+                        strokeWidth = side * 0.12f,
+                        cap = StrokeCap.Round,
+                    )
+                    drawLine(
+                        color = color,
+                        start = Offset(side * 0.43f, side * 0.76f),
+                        end = Offset(side * 0.82f, side * 0.26f),
+                        strokeWidth = side * 0.12f,
+                        cap = StrokeCap.Round,
+                    )
+                }
+            },
+    )
 }
 
 internal data class ThemedText(
@@ -192,8 +241,8 @@ private fun ThemedInlineText(
     val themedText = buildThemedText(
         inlines,
         theme,
-        accentFont = theme.fonts.accent.resolve(),
-        highlightFont = theme.fonts.highlight.resolve(),
+        boldFont = theme.fonts.bold.resolve(),
+        emphasisFont = theme.fonts.emphasis.resolve(),
     )
     var layoutResult by remember(themedText.text) { mutableStateOf<TextLayoutResult?>(null) }
     val stripeColor = theme.inlines.highlightStripe
@@ -235,13 +284,13 @@ private fun ThemedInlineText(
 internal fun buildThemedText(
     inlines: List<Inline>,
     theme: MarkardTheme,
-    accentFont: androidx.compose.ui.text.font.FontFamily? = null,
-    highlightFont: androidx.compose.ui.text.font.FontFamily? = null,
+    boldFont: androidx.compose.ui.text.font.FontFamily? = null,
+    emphasisFont: androidx.compose.ui.text.font.FontFamily? = null,
 ): ThemedText {
     val builder = AnnotatedString.Builder()
     val highlights = mutableListOf<TextRange>()
     val hashtags = mutableListOf<TextRange>()
-    appendInlines(builder, highlights, hashtags, inlines, theme, accentFont, highlightFont)
+    appendInlines(builder, highlights, hashtags, inlines, theme, boldFont, emphasisFont)
     return ThemedText(builder.toAnnotatedString(), highlights, hashtags)
 }
 
@@ -251,24 +300,21 @@ private fun appendInlines(
     hashtags: MutableList<TextRange>,
     inlines: List<Inline>,
     theme: MarkardTheme,
-    accentFont: androidx.compose.ui.text.font.FontFamily? = null,
-    highlightFont: androidx.compose.ui.text.font.FontFamily? = null,
+    boldFont: androidx.compose.ui.text.font.FontFamily? = null,
+    emphasisFont: androidx.compose.ui.text.font.FontFamily? = null,
 ) {
     inlines.forEach { inline ->
         when (inline) {
             is Inline.Text -> builder.append(inline.value)
             is Inline.Code -> appendStyled(builder, highlights, theme, theme.inlines.code) { builder.append(inline.value) }
-            is Inline.Strong -> appendStyled(builder, highlights, theme, theme.inlines.strong) {
-                appendInlines(builder, highlights, hashtags, inline.content, theme, accentFont, highlightFont)
+            is Inline.Bold -> appendStyled(builder, highlights, theme, theme.inlines.bold.copy(fontFamily = boldFont ?: theme.inlines.bold.fontFamily)) {
+                appendInlines(builder, highlights, hashtags, inline.content, theme, boldFont, emphasisFont)
             }
-            is Inline.Emphasis -> appendStyled(builder, highlights, theme, theme.inlines.emphasis) {
-                appendInlines(builder, highlights, hashtags, inline.content, theme, accentFont, highlightFont)
+            is Inline.Strikethrough -> appendStyled(builder, highlights, theme, theme.inlines.strikethrough) {
+                appendInlines(builder, highlights, hashtags, inline.content, theme, boldFont, emphasisFont)
             }
-            is Inline.Accent -> appendStyled(builder, highlights, theme, theme.inlines.accent.copy(fontFamily = accentFont ?: theme.inlines.accent.fontFamily)) {
-                appendInlines(builder, highlights, hashtags, inline.content, theme, accentFont, highlightFont)
-            }
-            is Inline.Highlight -> appendStyled(builder, highlights, theme, theme.inlines.highlight.copy(fontFamily = highlightFont ?: theme.inlines.highlight.fontFamily), highlight = true) {
-                appendInlines(builder, highlights, hashtags, inline.content, theme, accentFont, highlightFont)
+            is Inline.Emphasis -> appendStyled(builder, highlights, theme, theme.inlines.emphasis.copy(fontFamily = emphasisFont ?: theme.inlines.emphasis.fontFamily), emphasis = true) {
+                appendInlines(builder, highlights, hashtags, inline.content, theme, boldFont, emphasisFont)
             }
             is Inline.Hashtag -> {
                 builder.append(theme.inlines.spacing)
@@ -337,7 +383,7 @@ private inline fun appendStyled(
     highlights: MutableList<TextRange>,
     theme: MarkardTheme,
     style: SpanStyle,
-    highlight: Boolean = false,
+    emphasis: Boolean = false,
     content: () -> Unit,
 ) {
     builder.append(theme.inlines.spacing)
@@ -346,6 +392,6 @@ private inline fun appendStyled(
     content()
     builder.pop()
     val end = builder.length
-    if (highlight && end > start) highlights += TextRange(start, end)
+    if (emphasis && end > start) highlights += TextRange(start, end)
     builder.append(theme.inlines.spacing)
 }
