@@ -55,43 +55,17 @@ vertical collection. `Markard(markdown)` keeps its single-card behavior.
 
 The library uses Noto Sans CJK SC as the default local fallback, with LXGW
 WenKai, Noto Serif CJK SC, and Sarasa Gothic SC as additional Chinese-capable
-families. Font files are intentionally not
-committed to the repository. Run the initialization step below before the
-first build:
+families. Font files are intentionally not committed to the repository. Run
+the helper before the first build in a worktree:
 
 ```bash
-mkdir -p markard/src/commonMain/composeResources/font \
-         markard/src/commonMain/composeResources/files
-
-curl -L --fail --show-error \
-  'https://github.com/notofonts/noto-cjk/raw/main/Sans/Variable/TTF/Subset/NotoSansSC-VF.ttf' \
-  -o markard/src/commonMain/composeResources/font/noto_sans_cjk_sc.ttf
-curl -L --fail --show-error \
-  'https://raw.githubusercontent.com/lxgw/LxgwWenKai/main/fonts/TTF/LXGWWenKai-Regular.ttf' \
-  -o markard/src/commonMain/composeResources/font/lxgw_wenkai_regular.ttf
-curl -L --fail --show-error \
-  'https://github.com/notofonts/noto-cjk/raw/main/Serif/Variable/TTF/Subset/NotoSerifSC-VF.ttf' \
-  -o markard/src/commonMain/composeResources/font/noto_serif_cjk_sc.ttf
-
-# Requires bsdtar (available by default on macOS).
-sarasa_archive="$(mktemp "${TMPDIR:-/tmp}/sarasa-gothic.XXXXXX.7z")"
-curl -L --fail --show-error \
-  'https://github.com/be5invis/Sarasa-Gothic/releases/download/v1.0.40/SarasaGothicSC-TTF-1.0.40.7z' \
-  -o "$sarasa_archive"
-bsdtar -xOf "$sarasa_archive" SarasaGothicSC-Regular.ttf \
-  > markard/src/commonMain/composeResources/font/sarasa_gothic_sc_regular.ttf
-rm -f "$sarasa_archive"
-
-curl -L --fail --show-error \
-  'https://raw.githubusercontent.com/notofonts/noto-fonts/main/LICENSE' \
-  -o markard/src/commonMain/composeResources/files/NOTO_CJK_LICENSE.txt
-curl -L --fail --show-error \
-  'https://raw.githubusercontent.com/lxgw/LxgwWenKai/main/OFL.txt' \
-  -o markard/src/commonMain/composeResources/files/LXGW_WENKAI_OFL.txt
-curl -L --fail --show-error \
-  'https://raw.githubusercontent.com/be5invis/Sarasa-Gothic/main/LICENSE' \
-  -o markard/src/commonMain/composeResources/files/SARASA_GOTHIC_LICENSE.txt
+./scripts/download-fonts.sh
 ```
+
+The helper uses the `main` worktree as a local font cache. It downloads only
+fonts missing from `main`, then automatically copies them into the current
+worktree. Creating additional worktrees therefore does not download the fonts
+again. The script requires `curl` and `bsdtar`.
 
 `MarkardFontTheme` lets themes choose different families for headings, body
 text, `^^accent^^`, and `==highlight==`. Each non-Noto family falls back to a
