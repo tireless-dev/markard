@@ -3,6 +3,7 @@ package dev.tireless.markard.sample
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -17,11 +18,20 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.InternalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.SkiaGraphicsContext
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.layer.drawLayer
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -184,6 +194,7 @@ private fun PreviewPanel(
         MarkdownParser.splitIntoSections(markdown).ifEmpty { listOf("") }
     }
     val currentPage = selectedPage.coerceIn(0, pages.lastIndex)
+    val previewFocusRequester = remember { FocusRequester() }
     val scope = rememberCoroutineScope()
     val graphicsContext = remember { SkiaGraphicsContext() }
     val graphicsLayer = remember { graphicsContext.createGraphicsLayer() }
@@ -198,6 +209,9 @@ private fun PreviewPanel(
     LaunchedEffect(pages.size) {
         selectedPage = currentPage
     }
+    LaunchedEffect(Unit) {
+        previewFocusRequester.requestFocus()
+    }
     LaunchedEffect(currentPage, markdown, theme) {
         message = null
     }
@@ -208,21 +222,12 @@ private fun PreviewPanel(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                PreviewActionButton("‹", enabled = currentPage > 0) {
-                    selectedPage = currentPage - 1
-                }
-                Text(
-                    "${currentPage + 1} / ${pages.size}",
-                    modifier = Modifier.padding(horizontal = 12.dp),
-                    color = Color(0xFF666666),
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium,
-                )
-                PreviewActionButton("›", enabled = currentPage < pages.lastIndex) {
-                    selectedPage = currentPage + 1
-                }
-            }
+            Text(
+                "${currentPage + 1} / ${pages.size}",
+                color = Color(0xFF666666),
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
+            )
 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 message?.let {
@@ -257,7 +262,27 @@ private fun PreviewPanel(
         }
         BoxWithConstraints(
             Modifier.weight(1f).fillMaxWidth()
-                .background(Color(0xFFE3E4E6), RoundedCornerShape(18.dp)).padding(28.dp),
+                .background(Color(0xFFE3E4E6), RoundedCornerShape(18.dp))
+                .focusRequester(previewFocusRequester)
+                .onPreviewKeyEvent { event ->
+                    if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                    when (event.key) {
+                        Key.DirectionLeft -> {
+                            if (currentPage > 0) selectedPage = currentPage - 1
+                            true
+                        }
+                        Key.DirectionRight -> {
+                            if (currentPage < pages.lastIndex) selectedPage = currentPage + 1
+                            true
+                        }
+                        else -> false
+                    }
+                }
+                .focusable()
+                .pointerInput(Unit) {
+                    detectTapGestures { previewFocusRequester.requestFocus() }
+                }
+                .padding(28.dp),
             contentAlignment = Alignment.Center,
         ) {
             val aspectRatio = theme.card.aspectRatio ?: (3f / 4f)
@@ -274,6 +299,22 @@ private fun PreviewPanel(
                     theme = theme,
                 )
             }
+            PreviewActionButton(
+                label = "‹",
+                modifier = Modifier.align(Alignment.CenterStart),
+                enabled = currentPage > 0,
+            ) {
+                selectedPage = currentPage - 1
+                previewFocusRequester.requestFocus()
+            }
+            PreviewActionButton(
+                label = "›",
+                modifier = Modifier.align(Alignment.CenterEnd),
+                enabled = currentPage < pages.lastIndex,
+            ) {
+                selectedPage = currentPage + 1
+                previewFocusRequester.requestFocus()
+            }
         }
     }
 }
@@ -281,11 +322,12 @@ private fun PreviewPanel(
 @Composable
 private fun PreviewActionButton(
     label: String,
+    modifier: Modifier = Modifier,
     enabled: Boolean = true,
     onClick: () -> Unit,
 ) {
     Box(
-        Modifier
+        modifier
             .height(32.dp)
             .clip(RoundedCornerShape(9.dp))
             .background(Color.White)
