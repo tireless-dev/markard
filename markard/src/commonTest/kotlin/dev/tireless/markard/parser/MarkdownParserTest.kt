@@ -94,4 +94,18 @@ class MarkdownParserTest {
         assertEquals(1, documents.size)
         assertEquals(2, documents.single().blocks.size)
     }
+
+    @Test fun exposesMarkdownForEveryPage() {
+        assertEquals(
+            listOf("## 第一页\n内容一", "第二页", "## 第三页\n内容三"),
+            MarkdownParser.splitIntoSections(
+                """## 第一页
+内容一
+--
+第二页
+## 第三页
+内容三""",
+            ),
+        )
+    }
 }

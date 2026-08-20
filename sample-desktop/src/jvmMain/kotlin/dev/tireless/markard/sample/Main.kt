@@ -30,6 +30,7 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import dev.tireless.markard.Markard
+import dev.tireless.markard.parser.MarkdownParser
 import dev.tireless.markard.theme.MarkardTheme
 import java.awt.FileDialog
 import java.awt.Toolkit
@@ -67,7 +68,17 @@ private val sampleMarkdown = """## 提升效率的 3 个小习惯｜亲测有效
 
 #效率提升 #自我管理 #成长记录
 
-> 我是雷一猴"""
+> 我是雷一猴
+
+--
+
+下一张也可以没有标题
+
+每一页都会单独预览、复制和导出。
+
+## 坚持比完美更重要
+
+从最小的一步开始，持续行动。"""
 
 fun main() = application {
     Window(
@@ -168,6 +179,11 @@ private fun PreviewPanel(
     modifier: Modifier = Modifier,
 ) {
     var message by remember { mutableStateOf<String?>(null) }
+    var selectedPage by remember { mutableIntStateOf(0) }
+    val pages = remember(markdown) {
+        MarkdownParser.splitIntoSections(markdown).ifEmpty { listOf("") }
+    }
+    val currentPage = selectedPage.coerceIn(0, pages.lastIndex)
     val scope = rememberCoroutineScope()
     val graphicsContext = remember { SkiaGraphicsContext() }
     val graphicsLayer = remember { graphicsContext.createGraphicsLayer() }
@@ -179,34 +195,62 @@ private fun PreviewPanel(
         }
     }
 
+    LaunchedEffect(pages.size) {
+        selectedPage = currentPage
+    }
+    LaunchedEffect(currentPage, markdown, theme) {
+        message = null
+    }
+
     Column(modifier) {
         Row(
             Modifier.fillMaxWidth().height(40.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.End,
+            horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            message?.let {
-                Text(it, color = Color(0xFF777777), fontSize = 12.sp)
-                Spacer(Modifier.width(12.dp))
-            }
-            PreviewActionButton("复制图片") {
-                scope.launch {
-                    runCatching {
-                        copyImageToClipboard(graphicsLayer.toImageBitmap().toBufferedImage())
-                    }.onSuccess {
-                        message = "已复制"
-                    }.onFailure {
-                        message = "复制失败"
-                    }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                PreviewActionButton("‹", enabled = currentPage > 0) {
+                    selectedPage = currentPage - 1
+                }
+                Text(
+                    "${currentPage + 1} / ${pages.size}",
+                    modifier = Modifier.padding(horizontal = 12.dp),
+                    color = Color(0xFF666666),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                )
+                PreviewActionButton("›", enabled = currentPage < pages.lastIndex) {
+                    selectedPage = currentPage + 1
                 }
             }
-            Spacer(Modifier.width(8.dp))
-            PreviewActionButton("导出 PNG") {
-                scope.launch {
-                    runCatching {
-                        exportImage(graphicsLayer.toImageBitmap().toBufferedImage())
-                    }.onSuccess { exported ->
-                        if (exported) message = "已导出"
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                message?.let {
+                    Text(it, color = Color(0xFF777777), fontSize = 12.sp)
+                    Spacer(Modifier.width(12.dp))
+                }
+                PreviewActionButton("复制图片") {
+                    scope.launch {
+                        runCatching {
+                            copyImageToClipboard(graphicsLayer.toImageBitmap().toBufferedImage())
+                        }.onSuccess {
+                            message = "已复制第 ${currentPage + 1} 张"
+                        }.onFailure {
+                            message = "复制失败"
+                        }
+                    }
+                }
+                Spacer(Modifier.width(8.dp))
+                PreviewActionButton("导出 PNG") {
+                    scope.launch {
+                        runCatching {
+                            exportImage(
+                                graphicsLayer.toImageBitmap().toBufferedImage(),
+                                defaultFileName = "markard-card-${currentPage + 1}.png",
+                            )
+                        }.onSuccess { exported ->
+                            if (exported) message = "已导出第 ${currentPage + 1} 张"
+                        }
                     }
                 }
             }
@@ -220,7 +264,7 @@ private fun PreviewPanel(
             val cardWidth = minOf(maxWidth, maxHeight * aspectRatio)
             Box(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), contentAlignment = Alignment.TopCenter) {
                 Markard(
-                    markdown,
+                    pages[currentPage],
                     modifier = Modifier.width(cardWidth).drawWithContent {
                         graphicsLayer.record {
                             this@drawWithContent.drawContent()
@@ -235,18 +279,27 @@ private fun PreviewPanel(
 }
 
 @Composable
-private fun PreviewActionButton(label: String, onClick: () -> Unit) {
+private fun PreviewActionButton(
+    label: String,
+    enabled: Boolean = true,
+    onClick: () -> Unit,
+) {
     Box(
         Modifier
             .height(32.dp)
             .clip(RoundedCornerShape(9.dp))
             .background(Color.White)
             .border(1.dp, PanelBorder, RoundedCornerShape(9.dp))
-            .clickable(onClick = onClick)
+            .clickable(enabled = enabled, onClick = onClick)
             .padding(horizontal = 12.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Text(label, color = Color(0xFF555555), fontSize = 12.sp, fontWeight = FontWeight.Medium)
+        Text(
+            label,
+            color = if (enabled) Color(0xFF555555) else Color(0xFFBBBBBB),
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Medium,
+        )
     }
 }
 
@@ -272,10 +325,10 @@ private fun copyImageToClipboard(image: BufferedImage) {
     Toolkit.getDefaultToolkit().systemClipboard.setContents(transferable, null)
 }
 
-private fun exportImage(image: BufferedImage): Boolean = runCatching {
+private fun exportImage(image: BufferedImage, defaultFileName: String): Boolean = runCatching {
     val owner = java.awt.Window.getWindows().firstOrNull { it.isActive && it.isShowing }
     val dialog = FileDialog(owner as? java.awt.Frame, "导出预览图片", FileDialog.SAVE).apply {
-        file = "markard-card.png"
+        file = defaultFileName
         isVisible = true
     }
     val selectedFile = dialog.file?.let { if (it.endsWith(".png", ignoreCase = true)) it else "$it.png" }

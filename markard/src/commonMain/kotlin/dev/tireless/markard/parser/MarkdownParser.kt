@@ -19,10 +19,14 @@ object MarkdownParser {
      * Empty sections are ignored, so leading/trailing or repeated separators
      * are harmless.
      */
-    fun parseSections(markdown: String): List<MarkardDocument> = splitSections(markdown)
-        .map(::parseDocument)
+    fun parseSections(markdown: String): List<MarkardDocument> = splitIntoSections(markdown)
+        .map(::parse)
 
-    internal fun splitSections(markdown: String): List<List<String>> {
+    /** Returns the source Markdown for each card section. */
+    fun splitIntoSections(markdown: String): List<String> = splitSectionLines(markdown)
+        .map { lines -> lines.joinToString("\n").trim() }
+
+    private fun splitSectionLines(markdown: String): List<List<String>> {
         val sections = mutableListOf<MutableList<String>>()
         var current = mutableListOf<String>()
 
